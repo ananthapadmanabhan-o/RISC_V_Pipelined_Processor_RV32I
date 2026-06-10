@@ -11,7 +11,7 @@ module if_id_reg (
 	output logic [31:0] if_id_instr
 );
 
-always_ff @(posedge clk) begin
+always_ff @(posedge clk)
 	if (rst) begin
 		if_id_pc 	<= 32'd0;
 		if_id_pc_4 	<= 32'd0;
