@@ -2,12 +2,23 @@ module id_ex_reg (
 	input logic clk,
 	input logic rst,
 	
+	// instruction decoder
 	input logic [6:0] opcode,
-	input logic [4:0] rd,
 	input logic [2:0] funct3,
+	input logic [6:0] funct7
+	// register file
+	input logic [4:0] rd,
 	input logic [4:0] rs1,
 	input logic [4:0] rs2,
-	input logic [6:0] funct7
+
+	// immediate generator
+	
+	// control unit
+
+
+
+
+
 
 	output logic [6:0] id_ex_opcode,
 	output logic [4:0] id_ex_rd,
