@@ -28,6 +28,28 @@ instr_mem instr_mem_inst (
 	.instr(instr)
 );
 
+//////////////////////////////////////////////////////////////////////////////
+// intruction fectch -> decode stage
+//////////////////////////////////////////////////////////////////////////////
+logic [31:0] pc4;
+logic [31:0] if_id_pc;
+logic [31:0] if_id_pc4;
+logic [31:0] if_id_instr;
+
+assign pc4 = pc_out + 32'd4;
+
+if_id_reg if_id_reg_inst (
+	.clk(clk),
+	.rst(rst),
+	
+	.pc(pc_out),
+	.pc4(pc4),
+	.instr(instr),
+	
+	.if_id_pc(if_id_pc),
+	.if_id_pc4(if_id_pc4),
+	.if_id_instr(if_id_instr)
+);
 
 /////////////////////////////////////////////////////////////////////////////
 // instruction decode
@@ -42,7 +64,7 @@ logic [6:0] funct7;
 
 
 instr_decode instr_decode_inst (
-	.instr(instr),
+	.instr(if_id_instr),
 	
 	.opcode(opcode),
 	.rd(rd),
@@ -59,7 +81,7 @@ logic [31:0] imm_out;
 
 imm_gen imm_gen_inst (
 	.opcode(opcode),
-	.instr(instr),
+	.instr(if_id_instr),
 	
 	.imm_out(imm_out)
 );
