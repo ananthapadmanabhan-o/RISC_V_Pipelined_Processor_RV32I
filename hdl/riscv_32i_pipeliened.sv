@@ -17,6 +17,8 @@ pc pc_inst (
 	.pc_out(pc_out)
 );
 
+assign pc_next = pc4;
+
 /////////////////////////////////////////////////////////////////////////////
 // instruction fetch
 /////////////////////////////////////////////////////////////////////////////
@@ -93,6 +95,7 @@ logic mem_write;
 logic mem_read;
 logic [31:0] read_data;
 
+/*
 data_mem data_mem_inst (
 	.clk(clk),
 	.mem_write(mem_write),
@@ -103,7 +106,7 @@ data_mem data_mem_inst (
 	.read_data(read_data)
 );
 
-
+*/
 
 /////////////////////////////////////////////////////////////////////////////
 // register file controlling
