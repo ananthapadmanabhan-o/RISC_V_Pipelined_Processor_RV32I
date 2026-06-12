@@ -40,7 +40,7 @@ always_ff @(posedge clk) begin
 	else begin
 		id_ex_rs1_data 	<= rs1_data;
 		id_ex_rs2_data 	<= rs2_data;
-		id_ex_imm_out 	<= imm;
+		id_ex_imm 	    <= imm;
 		id_ex_rd 		<= rd;
 		id_ex_reg_write <= reg_write;
 		id_ex_alu_src 	<= alu_src;

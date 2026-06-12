@@ -114,6 +114,8 @@ data_mem data_mem_inst (
 logic [31:0] rs1_data;
 logic [31:0] rs2_data;
 logic [31:0] writeback_data;
+logic [4:0] id_ex_rd;
+logic id_ex_reg_write;
 
 logic reg_write;
 
@@ -141,8 +143,6 @@ logic branch;
 logic [31:0] id_ex_rs1_data;
 logic [31:0] id_ex_rs2_data;
 logic [31:0] id_ex_imm;
-logic [4:0] id_ex_rd;
-logic id_ex_reg_write;
 logic id_ex_alu_src;
 logic [3:0] id_ex_alu_op;
 
