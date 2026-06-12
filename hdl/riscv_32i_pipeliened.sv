@@ -17,7 +17,6 @@ pc pc_inst (
 	.pc_out(pc_out)
 );
 
-assign pc_next = pc4;
 
 /////////////////////////////////////////////////////////////////////////////
 // instruction fetch
@@ -31,7 +30,7 @@ instr_mem instr_mem_inst (
 );
 
 //////////////////////////////////////////////////////////////////////////////
-// intruction fectch -> decode stage
+// IFID stage
 //////////////////////////////////////////////////////////////////////////////
 logic [31:0] pc4;
 logic [31:0] if_id_pc;
@@ -39,6 +38,7 @@ logic [31:0] if_id_pc4;
 logic [31:0] if_id_instr;
 
 assign pc4 = pc_out + 32'd4;
+assign pc_next = pc4;
 
 if_id_reg if_id_reg_inst (
 	.clk(clk),
@@ -115,27 +115,68 @@ logic [31:0] rs1_data;
 logic [31:0] rs2_data;
 logic [31:0] writeback_data;
 
+logic reg_write;
 
 reg_file reg_file_inst (
 	.clk(clk),
 	.rs1_addr(rs1),
 	.rs2_addr(rs2),
-	.rd_addr(rd),
+	.rd_addr(id_ex_rd),
 	.rd_data(writeback_data),
-	.reg_write(reg_write),
+	.reg_write(id_ex_reg_write),
 	
 	.rs1_data(rs1_data),
 	.rs2_data(rs2_data)
 );
 
+
+/////////////////////////////////////////////////////////////////////////////
+// IDEX stage
+/////////////////////////////////////////////////////////////////////////////
+logic alu_src;
+logic [3:0] alu_op;
+logic jump;
+logic branch;
+
+logic [31:0] id_ex_rs1_data;
+logic [31:0] id_ex_rs2_data;
+logic [31:0] id_ex_imm;
+logic [4:0] id_ex_rd;
+logic id_ex_reg_write;
+logic id_ex_alu_src;
+logic [3:0] id_ex_alu_op;
+
+id_ex_reg id_ex_reg_inst (
+	.clk(clk),
+	.rst(rst),
+	
+	.rs1_data(rs1_data),
+	.rs2_data(rs2_data),
+
+	.imm(imm_out),
+	.rd(rd),
+	
+	.reg_write(reg_write),
+	.alu_src(alu_src),
+	.alu_op(alu_op),
+
+
+	.id_ex_rs1_data(id_ex_rs1_data),
+	.id_ex_rs2_data(id_ex_rs2_data),
+	.id_ex_imm(id_ex_imm),
+	.id_ex_rd(id_ex_rd),
+	.id_ex_reg_write(id_ex_reg_write),
+	.id_ex_alu_src(id_ex_alu_src),
+	.id_ex_alu_op(id_ex_alu_op)
+);
+
+
+
+
 /////////////////////////////////////////////////////////////////////////////
 // control unit operations
 /////////////////////////////////////////////////////////////////////////////
-logic [3:0] alu_op;
-logic alu_src;
-logic reg_write;
-logic jump;
-logic branch;
+
 
 control_unit control_unit_inst (	
 	.opcode(opcode),
@@ -152,7 +193,6 @@ control_unit control_unit_inst (
 );
 
 
-assign writeback_data = alu_result;
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -163,19 +203,20 @@ logic [31:0] alu_b;
 logic [31:0] alu_result;
 
 
-assign alu_a = rs1_data;
-assign alu_b = (alu_src) ? imm_out: rs2_data;
+assign alu_a = id_ex_rs1_data;
+assign alu_b = (id_ex_alu_src) ? id_ex_imm: id_ex_rs2_data;
 
 alu alu_inst (
 	.a(alu_a),
 	.b(alu_b),
-	.alu_op(alu_op),
+	.alu_op(id_ex_alu_op),
 	
 	.alu_result(alu_result)
 );
 
 
 
+assign writeback_data = alu_result;
 
 
 
