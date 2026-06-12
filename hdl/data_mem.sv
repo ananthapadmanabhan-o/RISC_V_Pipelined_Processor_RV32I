@@ -17,6 +17,6 @@ always_ff @(posedge clk) begin
 end
 
 
-assign read_data <= (mem_read) ? data_memory[addr[9:2]]:  32'd0;
+assign read_data = (mem_read) ? data_memory[addr[9:2]]:  32'd0;
 
 endmodule
