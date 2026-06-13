@@ -1,6 +1,8 @@
 module riscv_32i_pipelined (
 	input logic clk,
-	input logic rst
+	input logic rst,
+	
+	output logic [31:0] pc_out_debugg
 );
 
 /////////////////////////////////////////////////////////////////////////////
@@ -8,6 +10,9 @@ module riscv_32i_pipelined (
 /////////////////////////////////////////////////////////////////////////////
 logic [31:0] pc_next;
 logic [31:0] pc_out;
+
+
+assign pc_out_debugg = pc_out;
 
 pc pc_inst (
 	.clk(clk),
@@ -116,16 +121,18 @@ logic [31:0] rs2_data;
 logic [31:0] writeback_data;
 logic [4:0] id_ex_rd;
 logic id_ex_reg_write;
+logic ex_mem_reg_write;          
 
 logic reg_write;
+logic [4:0] ex_mem_rd;  
 
 reg_file reg_file_inst (
 	.clk(clk),
 	.rs1_addr(rs1),
 	.rs2_addr(rs2),
-	.rd_addr(id_ex_rd),
+	.rd_addr(ex_mem_rd),
 	.rd_data(writeback_data),
-	.reg_write(id_ex_reg_write),
+	.reg_write(ex_mem_reg_write),
 	
 	.rs1_data(rs1_data),
 	.rs2_data(rs2_data)
@@ -170,8 +177,29 @@ id_ex_reg id_ex_reg_inst (
 	.id_ex_alu_op(id_ex_alu_op)
 );
 
+/////////////////////////////////////////////////////////////////////////////
+// EXMEM stage
+/////////////////////////////////////////////////////////////////////////////
+
+logic [31:0] ex_mem_alu_result;  
+logic [31:0] ex_mem_rs2_data;  
+logic [31:0] alu_result;
 
 
+
+ex_mem_reg ex_mem_reg_inst (
+    .clk(clk),
+    .rst(rst),
+    .alu_result(alu_result),
+    .id_ex_rd(id_ex_rd),
+    .id_ex_rs2_data(id_ex_rs2_data),
+    .id_ex_reg_write(id_ex_reg_write),
+
+    .ex_mem_alu_result(ex_mem_alu_result),
+    .ex_mem_rd(ex_mem_rd),
+    .ex_mem_rs2_data(ex_mem_rs2_data),
+    .ex_mem_reg_write(ex_mem_reg_write)
+);
 
 /////////////////////////////////////////////////////////////////////////////
 // control unit operations
@@ -200,7 +228,6 @@ control_unit control_unit_inst (
 /////////////////////////////////////////////////////////////////////////////
 logic [31:0] alu_a;
 logic [31:0] alu_b;
-logic [31:0] alu_result;
 
 
 assign alu_a = id_ex_rs1_data;
@@ -216,7 +243,7 @@ alu alu_inst (
 
 
 
-assign writeback_data = alu_result;
+assign writeback_data = ex_mem_alu_result;
 
 
 
