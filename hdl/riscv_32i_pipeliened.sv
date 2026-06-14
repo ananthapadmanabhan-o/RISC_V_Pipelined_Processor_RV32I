@@ -126,13 +126,17 @@ logic ex_mem_reg_write;
 logic reg_write;
 logic [4:0] ex_mem_rd;  
 
+logic [4:0] mem_wb_rd;
+logic mem_wb_reg_write;
+
+
 reg_file reg_file_inst (
 	.clk(clk),
 	.rs1_addr(rs1),
 	.rs2_addr(rs2),
-	.rd_addr(ex_mem_rd),
+	.rd_addr(mem_wb_rd),
 	.rd_data(writeback_data),
-	.reg_write(ex_mem_reg_write),
+	.reg_write(mem_wb_reg_write),
 	
 	.rs1_data(rs1_data),
 	.rs2_data(rs2_data)
@@ -221,11 +225,28 @@ control_unit control_unit_inst (
 );
 
 
+/////////////////////////////////////////////////////////////////////////////
+// MEMWB stage
+/////////////////////////////////////////////////////////////////////////////
+logic [31:0] mem_wb_alu_result;
 
+mem_wb_reg mem_wb_reg_inst (
+	.clk(clk),
+	.rst(rst),
+	
+	.ex_mem_alu_result(ex_mem_alu_result),
+	.ex_mem_rd(ex_mem_rd),
+	.ex_mem_reg_write(ex_mem_reg_write),
+	
+	.mem_wb_alu_result(mem_wb_alu_result),
+	.mem_wb_rd(mem_wb_rd),
+	.mem_wb_reg_write(mem_wb_reg_write)
+);
 
 /////////////////////////////////////////////////////////////////////////////
 // ALU operations
 /////////////////////////////////////////////////////////////////////////////
+
 logic [31:0] alu_a;
 logic [31:0] alu_b;
 
@@ -243,7 +264,7 @@ alu alu_inst (
 
 
 
-assign writeback_data = ex_mem_alu_result;
+assign writeback_data = mem_wb_alu_result;
 
 
 
