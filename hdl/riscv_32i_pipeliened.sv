@@ -1,67 +1,70 @@
 module riscv_32i_pipelined (
-	input logic clk,
-	input logic rst,
-	
-	output logic [31:0] pc_out_debugg
+    input logic clk,
+    input logic rst,
+
+    output logic [31:0] pc_out_debugg
 );
 
 /////////////////////////////////////////////////////////////////////////////
-// program counter
+// GLOBAL SIGNALS
 /////////////////////////////////////////////////////////////////////////////
-logic [31:0] pc_next;
 logic [31:0] pc_out;
-
+logic [31:0] pc_next;
 
 assign pc_out_debugg = pc_out;
 
-pc pc_inst (
-	.clk(clk),
-	.rst(rst),
-	.pc_next(pc_next),
-	
-	.pc_out(pc_out)
-);
-
-
 /////////////////////////////////////////////////////////////////////////////
-// instruction fetch
+// IF STAGE (Instruction Fetch)
 /////////////////////////////////////////////////////////////////////////////
+
+// IF stage signals
 logic [31:0] instr;
+logic [31:0] pc4;
 
-instr_mem instr_mem_inst (
-	.addr(pc_out),
-	
-	.instr(instr)
+// Program Counter
+pc pc_inst (
+    .clk(clk),
+    .rst(rst),
+    .pc_next(pc_next),
+    .pc_out(pc_out)
 );
 
-//////////////////////////////////////////////////////////////////////////////
-// IFID stage
-//////////////////////////////////////////////////////////////////////////////
-logic [31:0] pc4;
+// Instruction Memory
+instr_mem instr_mem_inst (
+    .addr(pc_out),
+    .instr(instr)
+);
+
+// Next PC logic
+assign pc4    = pc_out + 32'd4;
+assign pc_next = pc4;
+
+/////////////////////////////////////////////////////////////////////////////
+// IF/ID PIPELINE REGISTER
+/////////////////////////////////////////////////////////////////////////////
+
 logic [31:0] if_id_pc;
 logic [31:0] if_id_pc4;
 logic [31:0] if_id_instr;
 
-assign pc4 = pc_out + 32'd4;
-assign pc_next = pc4;
-
 if_id_reg if_id_reg_inst (
-	.clk(clk),
-	.rst(rst),
-	
-	.pc(pc_out),
-	.pc4(pc4),
-	.instr(instr),
-	
-	.if_id_pc(if_id_pc),
-	.if_id_pc4(if_id_pc4),
-	.if_id_instr(if_id_instr)
+    .clk(clk),
+    .rst(rst),
+
+    .pc(pc_out),
+    .pc4(pc4),
+    .instr(instr),
+
+    .if_id_pc(if_id_pc),
+    .if_id_pc4(if_id_pc4),
+    .if_id_instr(if_id_instr)
 );
 
 /////////////////////////////////////////////////////////////////////////////
-// instruction decode
+// ID STAGE (Instruction Decode)
 /////////////////////////////////////////////////////////////////////////////
 
+// Decode signals
 logic [6:0] opcode;
 logic [4:0] rd;
 logic [2:0] funct3;
@@ -69,203 +72,224 @@ logic [4:0] rs1;
 logic [4:0] rs2;
 logic [6:0] funct7;
 
-
-instr_decode instr_decode_inst (
-	.instr(if_id_instr),
-	
-	.opcode(opcode),
-	.rd(rd),
-	.funct3(funct3),
-	.rs1(rs1),
-	.rs2(rs2),
-	.funct7(funct7)
-);
-
-/////////////////////////////////////////////////////////////////////////////
-// immediate generator
-/////////////////////////////////////////////////////////////////////////////
+// Immediate
 logic [31:0] imm_out;
 
-imm_gen imm_gen_inst (
-	.opcode(opcode),
-	.instr(if_id_instr),
-	
-	.imm_out(imm_out)
-);
-
-/////////////////////////////////////////////////////////////////////////////
-// data memory operations
-/////////////////////////////////////////////////////////////////////////////
-logic mem_write;
-logic mem_read;
-logic [31:0] read_data;
-
-/*
-data_mem data_mem_inst (
-	.clk(clk),
-	.mem_write(mem_write),
-	.mem_read(mem_read),
-	.addr(alu_result),
-	.write_data(rs2_data),
-	
-	.read_data(read_data)
-);
-
-*/
-
-/////////////////////////////////////////////////////////////////////////////
-// register file controlling
-/////////////////////////////////////////////////////////////////////////////
+// Register File
 logic [31:0] rs1_data;
 logic [31:0] rs2_data;
 logic [31:0] writeback_data;
-logic [4:0] id_ex_rd;
-logic id_ex_reg_write;
-logic ex_mem_reg_write;          
 
+// Control signals
 logic reg_write;
-logic [4:0] ex_mem_rd;  
+logic alu_src;
+logic [3:0] alu_op;
+logic mem_read;
+logic mem_write;
+logic jump;
+logic branch;
+
+// Instruction Decode
+instr_decode instr_decode_inst (
+    .instr(if_id_instr),
+
+    .opcode(opcode),
+    .rd(rd),
+    .funct3(funct3),
+    .rs1(rs1),
+    .rs2(rs2),
+    .funct7(funct7)
+);
+
+// Immediate Generator
+imm_gen imm_gen_inst (
+    .opcode(opcode),
+    .instr(if_id_instr),
+
+    .imm_out(imm_out)
+);
+
+// Control Unit
+control_unit control_unit_inst (
+    .opcode(opcode),
+    .funct3(funct3),
+    .funct7(funct7),
+
+    .alu_op(alu_op),
+    .alu_src(alu_src),
+    .mem_write(mem_write),
+    .mem_read(mem_read),
+    .reg_write(reg_write),
+    .jump(jump),
+    .branch(branch)
+);
+
+/////////////////////////////////////////////////////////////////////////////
+// MEM/WB signals needed by Register File
+/////////////////////////////////////////////////////////////////////////////
 
 logic [4:0] mem_wb_rd;
 logic mem_wb_reg_write;
 
-
+// Register File
 reg_file reg_file_inst (
-	.clk(clk),
-	.rs1_addr(rs1),
-	.rs2_addr(rs2),
-	.rd_addr(mem_wb_rd),
-	.rd_data(writeback_data),
-	.reg_write(mem_wb_reg_write),
-	
-	.rs1_data(rs1_data),
-	.rs2_data(rs2_data)
+    .clk(clk),
+    .rs1_addr(rs1),
+    .rs2_addr(rs2),
+
+    .rd_addr(mem_wb_rd),
+    .rd_data(writeback_data),
+    .reg_write(mem_wb_reg_write),
+
+    .rs1_data(rs1_data),
+    .rs2_data(rs2_data)
 );
 
-
 /////////////////////////////////////////////////////////////////////////////
-// IDEX stage
+// ID/EX PIPELINE REGISTER
 /////////////////////////////////////////////////////////////////////////////
-logic alu_src;
-logic [3:0] alu_op;
-logic jump;
-logic branch;
 
 logic [31:0] id_ex_rs1_data;
 logic [31:0] id_ex_rs2_data;
 logic [31:0] id_ex_imm;
+
+logic [4:0] id_ex_rd;
+
+logic id_ex_reg_write;
 logic id_ex_alu_src;
 logic [3:0] id_ex_alu_op;
 
+logic id_ex_mem_read;
+logic id_ex_mem_write;
+
 id_ex_reg id_ex_reg_inst (
-	.clk(clk),
-	.rst(rst),
-	
-	.rs1_data(rs1_data),
-	.rs2_data(rs2_data),
-
-	.imm(imm_out),
-	.rd(rd),
-	
-	.reg_write(reg_write),
-	.alu_src(alu_src),
-	.alu_op(alu_op),
-
-
-	.id_ex_rs1_data(id_ex_rs1_data),
-	.id_ex_rs2_data(id_ex_rs2_data),
-	.id_ex_imm(id_ex_imm),
-	.id_ex_rd(id_ex_rd),
-	.id_ex_reg_write(id_ex_reg_write),
-	.id_ex_alu_src(id_ex_alu_src),
-	.id_ex_alu_op(id_ex_alu_op)
-);
-
-/////////////////////////////////////////////////////////////////////////////
-// EXMEM stage
-/////////////////////////////////////////////////////////////////////////////
-
-logic [31:0] ex_mem_alu_result;  
-logic [31:0] ex_mem_rs2_data;  
-logic [31:0] alu_result;
-
-
-
-ex_mem_reg ex_mem_reg_inst (
     .clk(clk),
     .rst(rst),
-    .alu_result(alu_result),
-    .id_ex_rd(id_ex_rd),
+
+    .rs1_data(rs1_data),
+    .rs2_data(rs2_data),
+
+    .imm(imm_out),
+    .rd(rd),
+
+    .reg_write(reg_write),
+    .alu_src(alu_src),
+    .alu_op(alu_op),
+
+    .mem_read(mem_read),
+    .mem_write(mem_write),
+
+    .id_ex_rs1_data(id_ex_rs1_data),
     .id_ex_rs2_data(id_ex_rs2_data),
+    .id_ex_imm(id_ex_imm),
+
+    .id_ex_rd(id_ex_rd),
+
     .id_ex_reg_write(id_ex_reg_write),
+    .id_ex_alu_src(id_ex_alu_src),
+    .id_ex_alu_op(id_ex_alu_op),
 
-    .ex_mem_alu_result(ex_mem_alu_result),
-    .ex_mem_rd(ex_mem_rd),
-    .ex_mem_rs2_data(ex_mem_rs2_data),
-    .ex_mem_reg_write(ex_mem_reg_write)
+    .id_ex_mem_read(id_ex_mem_read),
+    .id_ex_mem_write(id_ex_mem_write)
 );
 
 /////////////////////////////////////////////////////////////////////////////
-// control unit operations
-/////////////////////////////////////////////////////////////////////////////
-
-
-control_unit control_unit_inst (	
-	.opcode(opcode),
-	.funct3(funct3),
-	.funct7(funct7),
-	
-	.alu_op(alu_op),
-	.alu_src(alu_src),
-	.mem_write(mem_write),
-	.mem_read(mem_read),
-	.reg_write(reg_write),
-	.jump(jump),
-	.branch(branch)
-);
-
-
-/////////////////////////////////////////////////////////////////////////////
-// MEMWB stage
-/////////////////////////////////////////////////////////////////////////////
-logic [31:0] mem_wb_alu_result;
-
-mem_wb_reg mem_wb_reg_inst (
-	.clk(clk),
-	.rst(rst),
-	
-	.ex_mem_alu_result(ex_mem_alu_result),
-	.ex_mem_rd(ex_mem_rd),
-	.ex_mem_reg_write(ex_mem_reg_write),
-	
-	.mem_wb_alu_result(mem_wb_alu_result),
-	.mem_wb_rd(mem_wb_rd),
-	.mem_wb_reg_write(mem_wb_reg_write)
-);
-
-/////////////////////////////////////////////////////////////////////////////
-// ALU operations
+// EX STAGE (Execute)
 /////////////////////////////////////////////////////////////////////////////
 
 logic [31:0] alu_a;
 logic [31:0] alu_b;
-
+logic [31:0] alu_result;
 
 assign alu_a = id_ex_rs1_data;
-assign alu_b = (id_ex_alu_src) ? id_ex_imm: id_ex_rs2_data;
+assign alu_b = (id_ex_alu_src) ?
+               id_ex_imm :
+               id_ex_rs2_data;
 
 alu alu_inst (
-	.a(alu_a),
-	.b(alu_b),
-	.alu_op(id_ex_alu_op),
-	
-	.alu_result(alu_result)
+    .a(alu_a),
+    .b(alu_b),
+    .alu_op(id_ex_alu_op),
+
+    .alu_result(alu_result)
 );
 
+/////////////////////////////////////////////////////////////////////////////
+// EX/MEM PIPELINE REGISTER
+/////////////////////////////////////////////////////////////////////////////
 
+logic [31:0] ex_mem_alu_result;
+logic [31:0] ex_mem_rs2_data;
+
+logic [4:0] ex_mem_rd;
+
+logic ex_mem_reg_write;
+logic ex_mem_mem_read;
+logic ex_mem_mem_write;
+
+ex_mem_reg ex_mem_reg_inst (
+    .clk(clk),
+    .rst(rst),
+
+    .alu_result(alu_result),
+    .id_ex_rd(id_ex_rd),
+    .id_ex_rs2_data(id_ex_rs2_data),
+
+    .id_ex_reg_write(id_ex_reg_write),
+    .id_ex_mem_read(id_ex_mem_read),
+    .id_ex_mem_write(id_ex_mem_write),
+
+    .ex_mem_alu_result(ex_mem_alu_result),
+    .ex_mem_rs2_data(ex_mem_rs2_data),
+
+    .ex_mem_rd(ex_mem_rd),
+
+    .ex_mem_reg_write(ex_mem_reg_write),
+    .ex_mem_mem_read(ex_mem_mem_read),
+    .ex_mem_mem_write(ex_mem_mem_write)
+);
+
+/////////////////////////////////////////////////////////////////////////////
+// MEM STAGE (Data Memory)
+/////////////////////////////////////////////////////////////////////////////
+
+logic [31:0] read_data;
+
+data_mem data_mem_inst (
+    .clk(clk),
+
+    .mem_write(ex_mem_mem_write),
+    .mem_read(ex_mem_mem_read),
+
+    .addr(ex_mem_alu_result),
+    .write_data(ex_mem_rs2_data),
+
+    .read_data(read_data)
+);
+
+/////////////////////////////////////////////////////////////////////////////
+// MEM/WB PIPELINE REGISTER
+/////////////////////////////////////////////////////////////////////////////
+
+logic [31:0] mem_wb_alu_result;
+
+mem_wb_reg mem_wb_reg_inst (
+    .clk(clk),
+    .rst(rst),
+
+    .ex_mem_alu_result(ex_mem_alu_result),
+    .ex_mem_rd(ex_mem_rd),
+    .ex_mem_reg_write(ex_mem_reg_write),
+
+    .mem_wb_alu_result(mem_wb_alu_result),
+    .mem_wb_rd(mem_wb_rd),
+    .mem_wb_reg_write(mem_wb_reg_write)
+);
+
+/////////////////////////////////////////////////////////////////////////////
+// WB STAGE (Writeback)
+/////////////////////////////////////////////////////////////////////////////
 
 assign writeback_data = mem_wb_alu_result;
-
-
 
 endmodule

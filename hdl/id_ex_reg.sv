@@ -14,6 +14,9 @@ module id_ex_reg (
 	input logic reg_write,
 	input logic alu_src,
 	input logic [3:0] alu_op,
+	
+	input logic mem_read,
+	input logic mem_write,
 
 
 	output logic [31:0] id_ex_rs1_data,
@@ -22,7 +25,10 @@ module id_ex_reg (
 	output logic [4:0] id_ex_rd,
 	output logic id_ex_reg_write,
 	output logic id_ex_alu_src,
-	output logic [3:0] id_ex_alu_op
+	output logic [3:0] id_ex_alu_op,
+	
+	output logic id_ex_mem_read,
+	output logic id_ex_mem_write
 );
 
 
@@ -36,6 +42,9 @@ always_ff @(posedge clk) begin
 		id_ex_reg_write <= '0;
 		id_ex_alu_src 	<= '0;
 		id_ex_alu_op  	<= '0;
+		id_ex_mem_read  <= '0;
+        id_ex_mem_write <= '0;
+		
 	end
 	else begin
 		id_ex_rs1_data 	<= rs1_data;
@@ -45,6 +54,10 @@ always_ff @(posedge clk) begin
 		id_ex_reg_write <= reg_write;
 		id_ex_alu_src 	<= alu_src;
 		id_ex_alu_op  	<= alu_op;
+		
+		id_ex_mem_read  <= mem_read;
+        id_ex_mem_write <= mem_write;
+		
 	end
 end
 
