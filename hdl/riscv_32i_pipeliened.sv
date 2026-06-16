@@ -88,6 +88,7 @@ logic mem_read;
 logic mem_write;
 logic jump;
 logic branch;
+logic mem_to_reg;
 
 // Instruction Decode
 instr_decode instr_decode_inst (
@@ -121,7 +122,9 @@ control_unit control_unit_inst (
     .mem_read(mem_read),
     .reg_write(reg_write),
     .jump(jump),
-    .branch(branch)
+    .branch(branch),
+    .mem_to_reg(mem_to_reg)
+
 );
 
 /////////////////////////////////////////////////////////////////////////////
@@ -161,6 +164,7 @@ logic [3:0] id_ex_alu_op;
 
 logic id_ex_mem_read;
 logic id_ex_mem_write;
+logic id_ex_mem_to_reg;
 
 id_ex_reg id_ex_reg_inst (
     .clk(clk),
@@ -178,6 +182,7 @@ id_ex_reg id_ex_reg_inst (
 
     .mem_read(mem_read),
     .mem_write(mem_write),
+    .mem_to_reg(mem_to_reg),
 
     .id_ex_rs1_data(id_ex_rs1_data),
     .id_ex_rs2_data(id_ex_rs2_data),
@@ -190,7 +195,8 @@ id_ex_reg id_ex_reg_inst (
     .id_ex_alu_op(id_ex_alu_op),
 
     .id_ex_mem_read(id_ex_mem_read),
-    .id_ex_mem_write(id_ex_mem_write)
+    .id_ex_mem_write(id_ex_mem_write),
+    .id_ex_mem_to_reg(id_ex_mem_to_reg)
 );
 
 /////////////////////////////////////////////////////////////////////////////
@@ -226,6 +232,7 @@ logic [4:0] ex_mem_rd;
 logic ex_mem_reg_write;
 logic ex_mem_mem_read;
 logic ex_mem_mem_write;
+logic ex_mem_mem_to_reg;
 
 ex_mem_reg ex_mem_reg_inst (
     .clk(clk),
@@ -234,19 +241,18 @@ ex_mem_reg ex_mem_reg_inst (
     .alu_result(alu_result),
     .id_ex_rd(id_ex_rd),
     .id_ex_rs2_data(id_ex_rs2_data),
-
     .id_ex_reg_write(id_ex_reg_write),
     .id_ex_mem_read(id_ex_mem_read),
     .id_ex_mem_write(id_ex_mem_write),
+    .id_ex_mem_to_reg(id_ex_mem_to_reg),
 
     .ex_mem_alu_result(ex_mem_alu_result),
-    .ex_mem_rs2_data(ex_mem_rs2_data),
-
     .ex_mem_rd(ex_mem_rd),
-
+    .ex_mem_rs2_data(ex_mem_rs2_data),
     .ex_mem_reg_write(ex_mem_reg_write),
     .ex_mem_mem_read(ex_mem_mem_read),
-    .ex_mem_mem_write(ex_mem_mem_write)
+    .ex_mem_mem_write(ex_mem_mem_write),
+    .ex_mem_mem_to_reg(ex_mem_mem_to_reg)
 );
 
 /////////////////////////////////////////////////////////////////////////////
@@ -272,24 +278,29 @@ data_mem data_mem_inst (
 /////////////////////////////////////////////////////////////////////////////
 
 logic [31:0] mem_wb_alu_result;
+logic [31:0] mem_wb_read_data;
 
 mem_wb_reg mem_wb_reg_inst (
     .clk(clk),
     .rst(rst),
 
     .ex_mem_alu_result(ex_mem_alu_result),
+    .read_data(read_data),
     .ex_mem_rd(ex_mem_rd),
     .ex_mem_reg_write(ex_mem_reg_write),
+    .ex_mem_mem_to_reg(ex_mem_mem_to_reg),
 
     .mem_wb_alu_result(mem_wb_alu_result),
+    .mem_wb_read_data(mem_wb_read_data),
     .mem_wb_rd(mem_wb_rd),
-    .mem_wb_reg_write(mem_wb_reg_write)
+    .mem_wb_reg_write(mem_wb_reg_write),
+    .mem_wb_mem_to_reg(mem_wb_mem_to_reg)
 );
 
 /////////////////////////////////////////////////////////////////////////////
 // WB STAGE (Writeback)
 /////////////////////////////////////////////////////////////////////////////
 
-assign writeback_data = mem_wb_alu_result;
-
+assign writeback_data = (mem_wb_mem_to_reg) ? mem_wb_read_data : 
+                        mem_wb_alu_result;
 endmodule
