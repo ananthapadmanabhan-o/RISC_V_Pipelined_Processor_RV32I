@@ -157,6 +157,8 @@ logic [31:0] id_ex_rs2_data;
 logic [31:0] id_ex_imm;
 
 logic [4:0] id_ex_rd;
+logic [4:0] id_ex_rs1;
+logic [4:0] id_ex_rs2;
 
 logic id_ex_reg_write;
 logic id_ex_alu_src;
@@ -172,6 +174,8 @@ id_ex_reg id_ex_reg_inst (
 
     .rs1_data(rs1_data),
     .rs2_data(rs2_data),
+    .rs1(rs1),
+    .rs2(rs2),
 
     .imm(imm_out),
     .rd(rd),
@@ -196,29 +200,12 @@ id_ex_reg id_ex_reg_inst (
 
     .id_ex_mem_read(id_ex_mem_read),
     .id_ex_mem_write(id_ex_mem_write),
-    .id_ex_mem_to_reg(id_ex_mem_to_reg)
+    .id_ex_mem_to_reg(id_ex_mem_to_reg),
+    .id_ex_rs1(id_ex_rs1),
+    .id_ex_rs2(id_ex_rs2)
 );
 
-/////////////////////////////////////////////////////////////////////////////
-// EX STAGE (Execute)
-/////////////////////////////////////////////////////////////////////////////
 
-logic [31:0] alu_a;
-logic [31:0] alu_b;
-logic [31:0] alu_result;
-
-assign alu_a = id_ex_rs1_data;
-assign alu_b = (id_ex_alu_src) ?
-               id_ex_imm :
-               id_ex_rs2_data;
-
-alu alu_inst (
-    .a(alu_a),
-    .b(alu_b),
-    .alu_op(id_ex_alu_op),
-
-    .alu_result(alu_result)
-);
 
 /////////////////////////////////////////////////////////////////////////////
 // EX/MEM PIPELINE REGISTER
@@ -233,6 +220,7 @@ logic ex_mem_reg_write;
 logic ex_mem_mem_read;
 logic ex_mem_mem_write;
 logic ex_mem_mem_to_reg;
+logic [31:0] alu_result;
 
 ex_mem_reg ex_mem_reg_inst (
     .clk(clk),
@@ -279,6 +267,7 @@ data_mem data_mem_inst (
 
 logic [31:0] mem_wb_alu_result;
 logic [31:0] mem_wb_read_data;
+logic mem_wb_mem_to_reg;
 
 mem_wb_reg mem_wb_reg_inst (
     .clk(clk),
@@ -303,4 +292,77 @@ mem_wb_reg mem_wb_reg_inst (
 
 assign writeback_data = (mem_wb_mem_to_reg) ? mem_wb_read_data : 
                         mem_wb_alu_result;
+                        
+                        
+                        
+/////////////////////////////////////////////////////////////////////////////
+// forwarding unit
+/////////////////////////////////////////////////////////////////////////////
+ 
+logic [1:0] forward_a;                      
+logic [1:0] forward_b;                      
+                        
+forwarding_unit forwarding_unit_inst (
+    .id_ex_rs1(id_ex_rs1),
+    .id_ex_rs2(id_ex_rs2),
+    .ex_mem_rd(ex_mem_rd),
+    .mem_wb_rd(mem_wb_rd),
+    .ex_mem_reg_write(ex_mem_reg_write),
+    .mem_wb_reg_write(mem_wb_reg_write),
+    
+    .forward_a(forward_a),
+    .forward_b(forward_b)
+);
+                    
+                        
+
+logic [31:0] forward_rs1;
+logic [31:0] forward_rs2;
+
+
+always_comb begin 
+    case(forward_a)
+        2'b00: forward_rs1 = id_ex_rs1_data;
+        2'b01: forward_rs1 = ex_mem_alu_result;
+        2'b10: forward_rs1 = writeback_data;
+        default: forward_rs1 = id_ex_rs1_data;
+    endcase
+end                        
+                        
+                        
+always_comb begin 
+    case(forward_b)
+        2'b00: forward_rs2 = id_ex_rs2_data;
+        2'b01: forward_rs2 = ex_mem_alu_result;
+        2'b10: forward_rs2 = writeback_data;
+        default: forward_rs2 = id_ex_rs2_data;
+    endcase
+end                        
+                                
+/////////////////////////////////////////////////////////////////////////////
+// EX STAGE (Execute)
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+
+logic [31:0] alu_a;
+logic [31:0] alu_b;
+
+assign alu_a = forward_rs1;
+assign alu_b = (id_ex_alu_src) ?
+               id_ex_imm :
+               forward_rs2;
+
+alu alu_inst (
+    .a(alu_a),
+    .b(alu_b),
+    .alu_op(id_ex_alu_op),
+
+    .alu_result(alu_result)
+);
+
+
+
+                        
 endmodule
