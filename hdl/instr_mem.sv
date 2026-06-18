@@ -12,16 +12,19 @@ assign instr = memory[addr[9:2]];
 
 initial begin
   
+  
 memory[0] = 32'h00A00093; // addi x1,x0,10
 memory[1] = 32'h01400113; // addi x2,x0,20
+memory[2] = 32'h002081B3; // add x3,x1,x2
+memory[3] = 32'h00118233; // add x4,x3,x1
 
-memory[2] = 32'h00000013; // nop
-memory[3] = 32'h00000013; // nop
-memory[4] = 32'h00000013; // nop
-memory[5] = 32'h00000013; // nop
 
-memory[6] = 32'h002081B3; // add x3,x1,x2
-  
+
+
+
+
+
+
 end
 
 
