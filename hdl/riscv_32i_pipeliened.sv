@@ -20,11 +20,13 @@ assign pc_out_debugg = pc_out;
 // IF stage signals
 logic [31:0] instr;
 logic [31:0] pc4;
+logic stall;
 
 // Program Counter
 pc pc_inst (
     .clk(clk),
     .rst(rst),
+    .pc_en(~stall),
     .pc_next(pc_next),
     .pc_out(pc_out)
 );
@@ -50,6 +52,7 @@ logic [31:0] if_id_instr;
 if_id_reg if_id_reg_inst (
     .clk(clk),
     .rst(rst),
+    .if_id_write(~stall),
 
     .pc(pc_out),
     .pc4(pc4),
@@ -112,6 +115,7 @@ imm_gen imm_gen_inst (
 
 // Control Unit
 control_unit control_unit_inst (
+    .stall(stall),
     .opcode(opcode),
     .funct3(funct3),
     .funct7(funct7),
@@ -228,7 +232,7 @@ ex_mem_reg ex_mem_reg_inst (
 
     .alu_result(alu_result),
     .id_ex_rd(id_ex_rd),
-    .id_ex_rs2_data(id_ex_rs2_data),
+    .id_ex_rs2_data(forward_rs2),
     .id_ex_reg_write(id_ex_reg_write),
     .id_ex_mem_read(id_ex_mem_read),
     .id_ex_mem_write(id_ex_mem_write),
@@ -360,6 +364,16 @@ alu alu_inst (
     .alu_op(id_ex_alu_op),
 
     .alu_result(alu_result)
+);
+
+
+hazard_detection_unit hazard_detection_unit_inst (
+    .id_ex_mem_read(id_ex_mem_read),
+    .id_ex_rd(id_ex_rd),
+    .rs1(rs1),
+    .rs2(rs2),
+    
+    .stall(stall)
 );
 
 

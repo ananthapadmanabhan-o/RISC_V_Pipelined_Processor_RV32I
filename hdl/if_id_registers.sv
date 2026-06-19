@@ -1,6 +1,7 @@
 module if_id_reg (
 	input logic clk,
 	input logic rst,
+	input logic if_id_write,
 	
 	input logic [31:0] pc,
 	input logic [31:0] pc4,
@@ -17,7 +18,7 @@ always_ff @(posedge clk) begin
 		if_id_pc4 	<= 32'd0;
 		if_id_instr <= 32'd0;
 	end	
-	else begin
+	else if (if_id_write) begin
 		if_id_pc 	<= pc;
 		if_id_pc4 	<= pc4;
 		if_id_instr <= instr;
